@@ -1,2 +1,2 @@
 # Letter-Of-Credit
-This project implements a Letter Of Credit using Solidity smart contracts and web3.js library.
+This project implements a secure Payment channel using Solidity smart contracts and web3.js library.
