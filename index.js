@@ -17,13 +17,18 @@ app.post('/get-contract-owner/', async function (req, res) {
         if (!req.body.contractAddress) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
         }
-        var contractObj = new PaymentContract(req.body.contractAddress, web3)
-        let add = await contractObj.getOwner()
-        if (add !== undefined) {
-            return res.json({ "status": "success", "data": { "Address ": add } })
-        }
-        else {
-            return res.json({ "status": "error" })
+        var c = await web3.utils.checkAddressChecksum(req.body.contractAddress);
+        if (c) {
+            var contractObj = new PaymentContract(req.body.contractAddress, web3)
+            let add = await contractObj.getOwner()
+            if (add !== undefined) {
+                return res.json({ "status": "success", "data": { "Address ": add } })
+            }
+            else {
+                return res.json({ "status": "error" })
+            }
+        } else {
+            return res.json({ "status": "error", "data": "Address checksum invalid" })
         }
 
     }
@@ -38,16 +43,23 @@ app.post('/sign-message/', async function (req, res) {
         if (!req.body.signer || !req.body.recipient || !req.body.amount || !req.body.nonce || !req.body.contractAddress) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
         }
-        let pk = config.keys[req.body.signer]
-        let amount = parseInt(req.body.amount)
-        let nonce = parseInt(req.body.nonce)
+        var c1 = await web3.utils.checkAddressChecksum(req.body.signer);
+        var c2 = await web3.utils.checkAddressChecksum(req.body.recipient);
+        var c3 = await web3.utils.checkAddressChecksum(req.body.contractAddress);
+        if (c1 && c2 && c3) {
+            let pk = config.keys[req.body.signer]
+            let amount = parseInt(req.body.amount)
+            let nonce = parseInt(req.body.nonce)
 
-        let result = await sc.signMessage(pk, req.body.recipient, amount, nonce, req.body.contractAddress)
-        if (result !== null) {
-            return res.json({ "status": "success", "Signature": result.signature })
-        }
-        else {
-            return res.json({ "status": "error" })
+            let result = await sc.signMessage(pk, req.body.recipient, amount, nonce, req.body.contractAddress)
+            if (result !== null) {
+                return res.json({ "status": "success", "Signature": result.signature })
+            }
+            else {
+                return res.json({ "status": "error" })
+            }
+        } else {
+            return res.json({ "status": "error", "data": "Address checksum invalid" })
         }
     }
     catch (err) {
@@ -61,16 +73,22 @@ app.post('/claim-payment/', async function (req, res) {
         if (!req.body.fromAcc || !req.body.amount || !req.body.nonce || !req.body.contractAdd || !req.body.signature) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
         }
-        let pk = config.keys[req.body.fromAcc]
-        console.log(pk)
-        let amount = parseInt(req.body.amount)
-        let nonce = parseInt(req.body.nonce)
-        let txHash = await sc.claimPayment(pk, req.body.fromAcc, amount, nonce, req.body.contractAdd, req.body.signature)
-        if (txHash !== null) {
-            return res.json({ "status": "success", "TransactionHash": txHash })
-        }
-        else {
-            return res.json({ "status": "error" })
+        var c2 = await web3.utils.checkAddressChecksum(req.body.fromAcc);
+        var c3 = await web3.utils.checkAddressChecksum(req.body.contractAdd);
+        if (c2 && c3) {
+            let pk = config.keys[req.body.fromAcc]
+            console.log(pk)
+            let amount = parseInt(req.body.amount)
+            let nonce = parseInt(req.body.nonce)
+            let txHash = await sc.claimPayment(pk, req.body.fromAcc, amount, nonce, req.body.contractAdd, req.body.signature)
+            if (txHash !== null) {
+                return res.json({ "status": "success", "TransactionHash": txHash })
+            }
+            else {
+                return res.json({ "status": "error" })
+            }
+        } else {
+            return res.json({ "status": "error", "data": "Address checksum invalid" })
         }
     }
     catch (err) {
@@ -84,13 +102,18 @@ app.post('/get-balance/', async function (req, res) {
         if (!req.body.contractAddress || !req.body.address) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
         }
-        var contractObj = new PaymentContract(req.body.contractAddress, web3)
-        let bal = await contractObj.balanceOf(req.body.address)
-        if (bal !== undefined) {
-            return res.json({ "status": "success", "data": { "Balance ": bal } })
-        }
-        else {
-            return res.json({ "status": "error" })
+        var c3 = await web3.utils.checkAddressChecksum(req.body.contractAdd);
+        if (c3) {
+            var contractObj = new PaymentContract(req.body.contractAddress, web3)
+            let bal = await contractObj.balanceOf(req.body.address)
+            if (bal !== undefined) {
+                return res.json({ "status": "success", "data": { "Balance ": bal } })
+            }
+            else {
+                return res.json({ "status": "error" })
+            }
+        } else {
+            return res.json({ "status": "error", "data": "Address checksum invalid" })
         }
     }
     catch (err) {
@@ -104,14 +127,20 @@ app.post('/shutdown/', async function (req, res) {
         if (!req.body.sender || !req.body.contractAddress) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
         }
-        let pk = config.keys[req.body.sender]
-        var contractObj = new PaymentContract(req.body.contractAddress, web3)
-        let txHash = await contractObj.shutDown(pk)
-        if (txHash !== null) {
-            return res.json({ "status": "success", "TransactionHash": txHash })
-        }
-        else {
-            return res.json({ "status": "error" })
+        var c2 = await web3.utils.checkAddressChecksum(req.body.sender);
+        var c3 = await web3.utils.checkAddressChecksum(req.body.contractAddress);
+        if (c2 && c3) {
+            let pk = config.keys[req.body.sender]
+            var contractObj = new PaymentContract(req.body.contractAddress, web3)
+            let txHash = await contractObj.shutDown(pk)
+            if (txHash !== null) {
+                return res.json({ "status": "success", "TransactionHash": txHash })
+            }
+            else {
+                return res.json({ "status": "error" })
+            }
+        } else {
+            return res.json({ "status": "error", "data": "Address checksum invalid" })
         }
     }
     catch (err) {
@@ -125,14 +154,20 @@ app.post('/deploy-contract/', async function (req, res) {
         if (!req.body.recipient || !req.body.amount || !req.body.sender) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
         }
-        let pk = config.keys[req.body.sender]
-        console.log(pk)
-        let result = await utils.deployContract(req.body.recipient, req.body.amount, pk)
-        if (result !== null) {
-            return res.json({ "status": "success", "TransactionHash": result })
-        }
-        else {
-            return res.json({ "status": "error" })
+        var c2 = await web3.utils.checkAddressChecksum(req.body.recipient);
+        var c3 = await web3.utils.checkAddressChecksum(req.body.sender);
+        if (c2 && c3) {
+            let pk = config.keys[req.body.sender]
+            console.log(pk)
+            let result = await utils.deployContract(req.body.recipient, req.body.amount, pk)
+            if (result !== null) {
+                return res.json({ "status": "success", "TransactionHash": result })
+            }
+            else {
+                return res.json({ "status": "error" })
+            }
+        } else {
+            return res.json({ "status": "error", "data": "Address checksum invalid" })
         }
     }
     catch (err) {

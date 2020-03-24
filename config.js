@@ -3,7 +3,7 @@
 var config = {};
 config.env = "testnet"
 config.jwt = {}
-if (config.env == "testnetss") {
+if (config.env == "development") {
     config.name = "Ganache"
     config.provider = "HTTP://127.0.0.1:7545"
     config.chainId = "0x03"
@@ -19,10 +19,6 @@ else if (config.env == "testnet") {
     config.name = "Ropsten"
     config.chainId = "0x03"
     config.provider = "https://ropsten.infura.io/v3/635e8595f67545adbb5e436f40f7950d"
-    // config.account1 = "0x00BEFBec4AA42230E88b8fF6291Aeba25a5eb887"
-    // config.account2 = "0xF1638221192ebeB5B423ECC984cE737e44FB1a97"
-    // config.privKey1 = "99AEFD83452290F6B4CA17D9950ED6856FEE24FCCF2BE3FD30489DA9B72815B4"
-    // config.privKey2 = "5844FA7A2A073DEB6F01C1CB2F04AFD71F62AFAC604078DA6163D4C3DEB3EF3F"
     config.TxGasLimit = 30000
     config.contractGasLimit = 4000000
     config.keys = {
