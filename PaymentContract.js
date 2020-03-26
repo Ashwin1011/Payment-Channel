@@ -1,90 +1,12 @@
 var utils = require('./utils');
 var config = require('./config')
 var bigNumber = require('bignumber.js');
+var contractDat = require('./compiler/RecieverPays')
 
 function PaymentContract(contractAddress, web3Instance) {
-    //var compiled = require(filePath)
     this.address = contractAddress
-    //hard code abi here
-    this.abi = [
-        {
-            "constant": false,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "_contract",
-                    "type": "address"
-                },
-                {
-                    "internalType": "address",
-                    "name": "_owner",
-                    "type": "address"
-                }
-            ],
-            "name": "claim",
-            "outputs": [],
-            "payable": true,
-            "stateMutability": "payable",
-            "type": "function"
-        },
-        {
-            "constant": false,
-            "inputs": [],
-            "name": "shutdown",
-            "outputs": [],
-            "payable": false,
-            "stateMutability": "nonpayable",
-            "type": "function"
-        },
-        {
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "_rec",
-                    "type": "address"
-                }
-            ],
-            "payable": true,
-            "stateMutability": "payable",
-            "type": "constructor"
-        },
-        {
-            "constant": true,
-            "inputs": [
-                {
-                    "internalType": "address",
-                    "name": "_add",
-                    "type": "address"
-                }
-            ],
-            "name": "balanceOf",
-            "outputs": [
-                {
-                    "internalType": "uint256",
-                    "name": "",
-                    "type": "uint256"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        },
-        {
-            "constant": true,
-            "inputs": [],
-            "name": "owner",
-            "outputs": [
-                {
-                    "internalType": "address",
-                    "name": "",
-                    "type": "address"
-                }
-            ],
-            "payable": false,
-            "stateMutability": "view",
-            "type": "function"
-        }
-    ]
+    let abi = contractDat.interface;
+    this.abi = JSON.parse(abi)
     this.web3 = web3Instance
     this.contract = new this.web3.eth.Contract(this.abi, this.address)
 }
@@ -101,20 +23,27 @@ PaymentContract.prototype.getOwner = async function () {
     }
 }
 
-
-PaymentContract.prototype.claim = async function (privKey, contractaddress, owner, nonce, fromAcc) {
+PaymentContract.prototype.getTimeout = async function () {
     try {
-        // privKey = " + privKey
-        // let sender = await this.web3.eth.accounts.privateKeyToAccount(privKey).address;
-        // console.log(sender);
-        let contractData = this.contract.methods.claim(contractaddress, owner).encodeABI()
+        let time = await this.contract.methods.expiration().call()
+        return time
+    }
+    catch (err) {
+        console.error('Get_timeout_error', err);
+        throw err
+    }
+}
+
+
+PaymentContract.prototype.claim = async function (privKey, contractaddress, owner, fromAcc, amount) {
+    try {
+        let contractData = this.contract.methods.claim(contractaddress, owner, amount).encodeABI()
         let rawTx = {
             gasLimit: this.web3.utils.toHex(config.contractGasLimit),
             data: contractData,
             from: fromAcc,
             to: this.address
         };
-        // const accountNonce = '0x' + (await this.web3.eth.getTransactionCount(fromAcc) + 1).toString(16)
         txInfo = await utils.getTxInfo(fromAcc);
         rawTx.nonce = txInfo.nonce;
         rawTx.gasPrice = txInfo.gasPriceHex;
@@ -144,7 +73,6 @@ PaymentContract.prototype.shutDown = async function (privKey) {
     try {
         let pk = "0x" + privKey
         let sender = await this.web3.eth.accounts.privateKeyToAccount(pk).address;
-        // console.log(sender);
         let contractData = this.contract.methods.shutdown().encodeABI()
         let rawTx = {
             gasLimit: this.web3.utils.toHex(config.contractGasLimit),
@@ -152,7 +80,6 @@ PaymentContract.prototype.shutDown = async function (privKey) {
             from: sender,
             to: this.address
         };
-        // const accountNonce = '0x' + (await this.web3.eth.getTransactionCount(fromAcc) + 1).toString(16)
         txInfo = await utils.getTxInfo(sender);
         rawTx.nonce = txInfo.nonce;
         rawTx.gasPrice = txInfo.gasPriceHex;

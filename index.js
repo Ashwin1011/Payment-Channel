@@ -38,9 +38,35 @@ app.post('/get-contract-owner/', async function (req, res) {
     }
 })
 
+app.post('/get-timeout/', async function (req, res) {
+    try {
+        if (!req.body.contractAddress) {
+            return res.json({ "status": "error", "message": "Invalid parameters" })
+        }
+        var c = await web3.utils.checkAddressChecksum(req.body.contractAddress);
+        if (c) {
+            var contractObj = new PaymentContract(req.body.contractAddress, web3)
+            let time = await contractObj.getTimeout()
+            if (time !== undefined) {
+                return res.json({ "status": "success", "data": { "Time ": time } })
+            }
+            else {
+                return res.json({ "status": "error" })
+            }
+        } else {
+            return res.json({ "status": "error", "data": "Address checksum invalid" })
+        }
+
+    }
+    catch (err) {
+        console.error(err)
+        return res.json({ "status": "error", "data": err.message })
+    }
+})
+
 app.post('/sign-message/', async function (req, res) {
     try {
-        if (!req.body.signer || !req.body.recipient || !req.body.amount || !req.body.nonce || !req.body.contractAddress) {
+        if (!req.body.signer || !req.body.recipient || !req.body.amount || !req.body.contractAddress) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
         }
         var c1 = await web3.utils.checkAddressChecksum(req.body.signer);
@@ -49,9 +75,7 @@ app.post('/sign-message/', async function (req, res) {
         if (c1 && c2 && c3) {
             let pk = config.keys[req.body.signer]
             let amount = parseInt(req.body.amount)
-            let nonce = parseInt(req.body.nonce)
-
-            let result = await sc.signMessage(pk, req.body.recipient, amount, nonce, req.body.contractAddress)
+            let result = await sc.signMessage(pk, req.body.recipient, amount, req.body.contractAddress)
             if (result !== null) {
                 return res.json({ "status": "success", "Signature": result.signature })
             }
@@ -70,17 +94,16 @@ app.post('/sign-message/', async function (req, res) {
 
 app.post('/claim-payment/', async function (req, res) {
     try {
-        if (!req.body.fromAcc || !req.body.amount || !req.body.nonce || !req.body.contractAdd || !req.body.signature) {
+        if (!req.body.fromAcc || !req.body.amount || !req.body.contractAdd || !req.body.signature) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
         }
         var c2 = await web3.utils.checkAddressChecksum(req.body.fromAcc);
         var c3 = await web3.utils.checkAddressChecksum(req.body.contractAdd);
         if (c2 && c3) {
             let pk = config.keys[req.body.fromAcc]
-            console.log(pk)
+            // console.log(pk)
             let amount = parseInt(req.body.amount)
-            let nonce = parseInt(req.body.nonce)
-            let txHash = await sc.claimPayment(pk, req.body.fromAcc, amount, nonce, req.body.contractAdd, req.body.signature)
+            let txHash = await sc.claimPayment(pk, req.body.fromAcc, amount, req.body.contractAdd, req.body.signature)
             if (txHash !== null) {
                 return res.json({ "status": "success", "TransactionHash": txHash })
             }
@@ -102,7 +125,7 @@ app.post('/get-balance/', async function (req, res) {
         if (!req.body.contractAddress || !req.body.address) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
         }
-        var c3 = await web3.utils.checkAddressChecksum(req.body.contractAdd);
+        var c3 = await web3.utils.checkAddressChecksum(req.body.address);
         if (c3) {
             var contractObj = new PaymentContract(req.body.contractAddress, web3)
             let bal = await contractObj.balanceOf(req.body.address)
@@ -122,7 +145,7 @@ app.post('/get-balance/', async function (req, res) {
     }
 })
 
-app.post('/shutdown/', async function (req, res) {
+app.post('/destroy/', async function (req, res) {
     try {
         if (!req.body.sender || !req.body.contractAddress) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
@@ -151,15 +174,14 @@ app.post('/shutdown/', async function (req, res) {
 
 app.post('/deploy-contract/', async function (req, res) {
     try {
-        if (!req.body.recipient || !req.body.amount || !req.body.sender) {
+        if (!req.body.recipient || !req.body.amount || !req.body.sender || !req.body.duration) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
         }
         var c2 = await web3.utils.checkAddressChecksum(req.body.recipient);
         var c3 = await web3.utils.checkAddressChecksum(req.body.sender);
         if (c2 && c3) {
             let pk = config.keys[req.body.sender]
-            console.log(pk)
-            let result = await utils.deployContract(req.body.recipient, req.body.amount, pk)
+            let result = await utils.deployContract(req.body.recipient, req.body.amount, pk, req.body.duration)
             if (result !== null) {
                 return res.json({ "status": "success", "TransactionHash": result })
             }
