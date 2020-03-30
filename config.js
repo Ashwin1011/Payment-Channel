@@ -18,7 +18,7 @@ if (config.env == "development") {
 else if (config.env == "testnet") {
     config.name = "Ropsten"
     config.chainId = "0x03"
-    config.provider = "https://ropsten.infura.io/v3/635e8595f67545adbb5e436f40f7950d"
+    config.provider = "https://ropsten.infura.io/v3/df39b32102d64c86bded47af294bbc92"
     config.TxGasLimit = 30000
     config.contractGasLimit = 4000000
     config.keys = {

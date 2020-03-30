@@ -1,4 +1,4 @@
-var Tx = require('ethereumjs-tx');
+var Tx = require('ethereumjs-tx').Transaction;
 var config = require('./config')
 const Web3 = require('web3')
 const contract = require('web3-eth-contract');
