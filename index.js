@@ -122,15 +122,15 @@ app.post('/claim-payment/', async function (req, res) {
 
 app.post('/get-balance/', async function (req, res) {
     try {
-        if (!req.body.contractAddress || !req.body.address) {
+        if (!req.body.address) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
         }
         var c3 = await web3.utils.checkAddressChecksum(req.body.address);
         if (c3) {
-            var contractObj = new PaymentContract(req.body.contractAddress, web3)
-            let bal = await contractObj.balanceOf(req.body.address)
+            var bal = await web3.eth.getBalance(req.body.address);
             if (bal !== undefined) {
-                return res.json({ "status": "success", "data": { "Balance ": bal } })
+                bal = web3.utils.fromWei(bal, 'ether');
+                return res.json({ "status": "success", "data": { "Balance ": bal + " ETH" } })
             }
             else {
                 return res.json({ "status": "error" })

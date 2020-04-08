@@ -78,7 +78,7 @@ var deployContract = async function (recipient, amount, privKey, duration) {
       data: contractData,
       from: sender,
       chainId: config.chainId,
-      value: web3.utils.toHex(web3.utils.toWei(amount, 'ether'))
+      value: amount
     };
     txInfo = await getTxInfo(sender);
 
