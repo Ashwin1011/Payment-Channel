@@ -60,7 +60,7 @@ app.post('/get-timeout/', async function (req, res) {
     }
     catch (err) {
         console.error(err)
-        return res.json({ "status": "error", "data": err.message })
+        return res.json({ "status": "error", "data": "Contract has been destroyed" })
     }
 })
 
