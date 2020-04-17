@@ -1,7 +1,10 @@
 'use strict'
 var express = require('express');
 var bodyParser = require('body-parser')
+const cors = require('cors')
+
 var app = express();
+app.use(cors);
 app.use(bodyParser.json())       // to support JSON-encoded bodies
 app.use(bodyParser.urlencoded({ extended: true }))// to support URL-encoded bodies
 const utils = require('./utils');
@@ -11,8 +14,12 @@ const PaymentContract = require('./PaymentContract');
 var Web3 = require('web3')
 const web3 = new Web3(new Web3.providers.HttpProvider(config.provider));
 
+app.get('/',function(req,res){
+    res.send('<h1>Working</h1>')
+})
 
-app.post('/get-contract-owner/', async function (req, res) {
+
+app.post('/getContractOwner', async function (req, res) {
     try {
         if (!req.body.contractAddress) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
@@ -38,7 +45,7 @@ app.post('/get-contract-owner/', async function (req, res) {
     }
 })
 
-app.post('/get-timeout/', async function (req, res) {
+app.post('/getTimeout', async function (req, res) {
     try {
         if (!req.body.contractAddress) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
@@ -64,7 +71,7 @@ app.post('/get-timeout/', async function (req, res) {
     }
 })
 
-app.post('/sign-message/', async function (req, res) {
+app.post('/signMessage', async function (req, res) {
     try {
         if (!req.body.signer || !req.body.recipient || !req.body.amount || !req.body.contractAddress) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
@@ -92,7 +99,7 @@ app.post('/sign-message/', async function (req, res) {
     }
 })
 
-app.post('/claim-payment/', async function (req, res) {
+app.post('/claimPayment', async function (req, res) {
     try {
         if (!req.body.fromAcc || !req.body.amount || !req.body.contractAdd || !req.body.signature) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
@@ -120,7 +127,7 @@ app.post('/claim-payment/', async function (req, res) {
     }
 })
 
-app.post('/get-balance/', async function (req, res) {
+app.post('/getBalance', async function (req, res) {
     try {
         if (!req.body.address) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
@@ -130,7 +137,7 @@ app.post('/get-balance/', async function (req, res) {
             var bal = await web3.eth.getBalance(req.body.address);
             if (bal !== undefined) {
                 bal = web3.utils.fromWei(bal, 'ether');
-                return res.json({ "status": "success", "data": { "Balance ": bal + " ETH" } })
+                return res.json({ "status": "success", "data": { "Balance": bal + " ETH" } })
             }
             else {
                 return res.json({ "status": "error" })
@@ -145,7 +152,7 @@ app.post('/get-balance/', async function (req, res) {
     }
 })
 
-app.post('/destroy/', async function (req, res) {
+app.post('/destroy', async function (req, res) {
     try {
         if (!req.body.sender || !req.body.contractAddress) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
@@ -163,7 +170,7 @@ app.post('/destroy/', async function (req, res) {
                 return res.json({ "status": "error" })
             }
         } else {
-            return res.json({ "status": "error", "data": "Address checksum invalid" })
+            return new Error("Address checksum invalid");
         }
     }
     catch (err) {
@@ -172,7 +179,7 @@ app.post('/destroy/', async function (req, res) {
     }
 })
 
-app.post('/deploy-contract/', async function (req, res) {
+app.post('/deployContract', async function (req, res) {
     try {
         if (!req.body.recipient || !req.body.amount || !req.body.sender || !req.body.duration) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
@@ -188,9 +195,8 @@ app.post('/deploy-contract/', async function (req, res) {
             else {
                 return res.json({ "status": "error" })
             }
-        } else {
-            return res.json({ "status": "error", "data": "Address checksum invalid" })
-        }
+        } else throw new Error("Address checksum invalid");
+        
     }
     catch (err) {
         console.error(err.message)
@@ -198,7 +204,7 @@ app.post('/deploy-contract/', async function (req, res) {
     }
 })
 
-app.post('/get-contract-address/', async function (req, res) {
+app.post('/getContractAddress', async function (req, res) {
     try {
         if (!req.body.txHash) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
@@ -207,9 +213,7 @@ app.post('/get-contract-address/', async function (req, res) {
         if (result !== null) {
             return res.json({ "status": "success", "Contract Address": result })
         }
-        else {
-            return res.json({ "status": "error" })
-        }
+        else throw new Error('Error in getting message')
     }
     catch (err) {
         console.error(err)
@@ -221,5 +225,7 @@ app.listen(4000, "0.0.0.0", function () {
     console.log("Micro-Payment Channel started");
 
 })
+
+// module.exports = app;
 
 

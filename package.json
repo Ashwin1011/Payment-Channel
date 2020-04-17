@@ -12,5 +12,8 @@
     "solc": "^0.4.25",
     "web3": "^1.0.0-beta.55",
     "web3-eth-contract": "^1.0.0-beta.55"
+  },
+  "devDependencies": {
+    "cors": "^2.8.5"
   }
 }
