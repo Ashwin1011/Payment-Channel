@@ -1,12 +1,12 @@
 'use strict'
 var express = require('express');
 var bodyParser = require('body-parser')
-const cors = require('cors')
+const cors = require('cors')({origin:true})
 
 var app = express();
-app.use(cors);
 app.use(bodyParser.json())       // to support JSON-encoded bodies
 app.use(bodyParser.urlencoded({ extended: true }))// to support URL-encoded bodies
+app.use(cors);
 const utils = require('./utils');
 const sc = require('./signandclaim.js')
 const config = require('./config');
@@ -21,27 +21,19 @@ app.get('/',function(req,res){
 
 app.post('/getContractOwner', async function (req, res) {
     try {
-        if (!req.body.contractAddress) {
-            return res.json({ "status": "error", "message": "Invalid parameters" })
-        }
+        if (!req.body.contractAddress) {throw new Error("Invalid parameters")}
         var c = await web3.utils.checkAddressChecksum(req.body.contractAddress);
         if (c) {
             var contractObj = new PaymentContract(req.body.contractAddress, web3)
             let add = await contractObj.getOwner()
-            if (add !== undefined) {
-                return res.json({ "status": "success", "data": { "Address ": add } })
-            }
-            else {
-                return res.json({ "status": "error" })
-            }
-        } else {
-            return res.json({ "status": "error", "data": "Address checksum invalid" })
-        }
+            if (add !== undefined) {return res.json({ "status": "success", "data":add})}
+            else {throw new Error("Error in getting Address")}
+        } else throw new Error("Address checksum invalid")
 
     }
     catch (err) {
         console.error(err)
-        return res.json({ "status": "error", "data": err.message })
+        return res.json({ "status":"error","msg":err.message})
     }
 })
 
@@ -55,19 +47,19 @@ app.post('/getTimeout', async function (req, res) {
             var contractObj = new PaymentContract(req.body.contractAddress, web3)
             let time = await contractObj.getTimeout()
             if (time !== undefined) {
-                return res.json({ "status": "success", "data": { "Time ": time } })
+                return res.json({ "status": "success", "data":time})
             }
             else {
-                return res.json({ "status": "error" })
+                throw new Error("error in getting timeout")
             }
         } else {
-            return res.json({ "status": "error", "data": "Address checksum invalid" })
+            return res.json({ "status": "error", "msg":"Address checksum invalid" })
         }
 
     }
     catch (err) {
         console.error(err)
-        return res.json({ "status": "error", "data": "Contract has been destroyed" })
+        return res.json({ "status": "error", "msg": "Contract has been destroyed" })
     }
 })
 
@@ -84,18 +76,18 @@ app.post('/signMessage', async function (req, res) {
             let amount = parseInt(req.body.amount)
             let result = await sc.signMessage(pk, req.body.recipient, amount, req.body.contractAddress)
             if (result !== null) {
-                return res.json({ "status": "success", "Signature": result.signature })
+                return res.json({ "status": "success", "data":result.signature})
             }
             else {
-                return res.json({ "status": "error" })
+                throw new Error('error in sign message');
             }
         } else {
-            return res.json({ "status": "error", "data": "Address checksum invalid" })
+            return res.json({ "status": "error", "msg": "Address checksum invalid" })
         }
     }
     catch (err) {
         console.error(err)
-        return res.json({ "status": "error", "data": err.message })
+        return res.json({ "status": "error", "msg": err.message })
     }
 })
 
@@ -112,43 +104,37 @@ app.post('/claimPayment', async function (req, res) {
             let amount = parseInt(req.body.amount)
             let txHash = await sc.claimPayment(pk, req.body.fromAcc, amount, req.body.contractAdd, req.body.signature)
             if (txHash !== null) {
-                return res.json({ "status": "success", "TransactionHash": txHash })
+                return res.json({ "status": "success", "data": txHash })
             }
             else {
-                return res.json({ "status": "error" })
+                throw new Error("error in claim payment")
             }
         } else {
-            return res.json({ "status": "error", "data": "Address checksum invalid" })
+            throw new Error("Address checksum invalid")
         }
     }
     catch (err) {
         console.error(err.message)
-        return res.json({ "status": "error", "data": err.message })
+        return res.json({ "status": "error", "msg": err.message })
     }
 })
 
 app.post('/getBalance', async function (req, res) {
     try {
-        if (!req.body.address) {
-            return res.json({ "status": "error", "message": "Invalid parameters" })
-        }
+        if (!req.body.address) throw new Error("Invalid parameters")
         var c3 = await web3.utils.checkAddressChecksum(req.body.address);
         if (c3) {
             var bal = await web3.eth.getBalance(req.body.address);
             if (bal !== undefined) {
                 bal = web3.utils.fromWei(bal, 'ether');
-                return res.json({ "status": "success", "data": { "Balance": bal + " ETH" } })
+                return res.json({ "status": "success", "data":bal})
             }
-            else {
-                return res.json({ "status": "error" })
-            }
-        } else {
-            return res.json({ "status": "error", "data": "Address checksum invalid" })
-        }
+            else return res.json({ "status": "success", "data":0})
+        } else {throw new Error("Address checksum invalid")}
     }
     catch (err) {
         console.error(err)
-        return res.json({ "status": "error", "data": err.message })
+        return res.json({ "status": "error", "msg":err.message})
     }
 })
 
@@ -164,10 +150,10 @@ app.post('/destroy', async function (req, res) {
             var contractObj = new PaymentContract(req.body.contractAddress, web3)
             let txHash = await contractObj.shutDown(pk)
             if (txHash !== null) {
-                return res.json({ "status": "success", "TransactionHash": txHash })
+                return res.json({ "status": "success", "data": txHash })
             }
             else {
-                return res.json({ "status": "error" })
+                throw new Error("error in destroy")
             }
         } else {
             return new Error("Address checksum invalid");
@@ -175,7 +161,7 @@ app.post('/destroy', async function (req, res) {
     }
     catch (err) {
         console.error(err.message)
-        return res.json({ "status": "error", "data": err.message })
+        return res.json({ "status": "error", "msg": err.message })
     }
 })
 
@@ -190,17 +176,17 @@ app.post('/deployContract', async function (req, res) {
             let pk = config.keys[req.body.sender]
             let result = await utils.deployContract(req.body.recipient, req.body.amount, pk, req.body.duration)
             if (result !== null) {
-                return res.json({ "status": "success", "TransactionHash": result })
+                return res.json({ "status": "success", "data":result})
             }
             else {
-                return res.json({ "status": "error" })
+                throw new Error('error in deployContract')
             }
         } else throw new Error("Address checksum invalid");
         
     }
     catch (err) {
         console.error(err.message)
-        return res.json({ "status": "error", "data": err.message })
+        return res.json({ "status": "error", "msg": err.message })
     }
 })
 
@@ -211,21 +197,21 @@ app.post('/getContractAddress', async function (req, res) {
         }
         let result = await utils.getContractAddress(req.body.txHash)
         if (result !== null) {
-            return res.json({ "status": "success", "Contract Address": result })
+            return res.json({ "status": "success", "data":result})
         }
         else throw new Error('Error in getting message')
     }
     catch (err) {
         console.error(err)
-        return res.json({ "status": "error", "data": err.message })
+        return res.json({ "status": "error", "msg": err.message })
     }
 })
 
-app.listen(4000, "0.0.0.0", function () {
-    console.log("Micro-Payment Channel started");
+// app.listen(4000, "0.0.0.0", function () {
+//     console.log("Micro-Payment Channel started");
 
-})
+// })
 
-// module.exports = app;
+module.exports = app;
 
 
