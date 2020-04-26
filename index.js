@@ -1,7 +1,7 @@
 'use strict'
 var express = require('express');
 var bodyParser = require('body-parser')
-const cors = require('cors')({origin:true})
+const cors = require('cors')({ origin: true })
 
 var app = express();
 app.use(bodyParser.json())       // to support JSON-encoded bodies
@@ -14,26 +14,27 @@ const PaymentContract = require('./PaymentContract');
 var Web3 = require('web3')
 const web3 = new Web3(new Web3.providers.HttpProvider(config.provider));
 
-app.get('/',function(req,res){
+app.get('/', function (req, res) {
     res.send('<h1>Working</h1>')
 })
 
 
 app.post('/getContractOwner', async function (req, res) {
     try {
-        if (!req.body.contractAddress) {throw new Error("Invalid parameters")}
-        var c = await web3.utils.checkAddressChecksum(req.body.contractAddress);
+        if (!req.body.contractAddress) { throw new Error("Invalid parameters") }
+        var ad  = web3.utils.toChecksumAddress(req.body.contractAddress)
+        var c = await web3.utils.checkAddressChecksum(ad);
         if (c) {
-            var contractObj = new PaymentContract(req.body.contractAddress, web3)
+            var contractObj = new PaymentContract(ad, web3)
             let add = await contractObj.getOwner()
-            if (add !== undefined) {return res.json({ "status": "success", "data":add})}
-            else {throw new Error("Error in getting Address")}
+            if (add !== undefined) { return res.json({ "status": "success", "data": add }) }
+            else { throw new Error("Error in getting Address") }
         } else throw new Error("Address checksum invalid")
 
     }
     catch (err) {
         console.error(err)
-        return res.json({ "status":"error","msg":err.message})
+        return res.json({ "status": "error", "msg": "Contract has been destroyed!" })
     }
 })
 
@@ -42,18 +43,29 @@ app.post('/getTimeout', async function (req, res) {
         if (!req.body.contractAddress) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
         }
-        var c = await web3.utils.checkAddressChecksum(req.body.contractAddress);
+        var ad  = web3.utils.toChecksumAddress(req.body.contractAddress)
+        var c = await web3.utils.isAddress(ad);
         if (c) {
-            var contractObj = new PaymentContract(req.body.contractAddress, web3)
+            var contractObj = new PaymentContract(ad, web3)
             let time = await contractObj.getTimeout()
             if (time !== undefined) {
-                return res.json({ "status": "success", "data":time})
+                var unixtimestamp = time;
+                var months_arr = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                var date = new Date(unixtimestamp * 1000);
+                var year = date.getFullYear();
+                var month = months_arr[date.getMonth()];
+                var day = date.getDate();
+                var hours = date.getHours();
+                var minutes = "0" + date.getMinutes();
+                var seconds = "0" + date.getSeconds();
+                var convdataTime = month + '-' + day + '-' + year + ' ' + hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+                return res.json({ "status": "success", "data": convdataTime })
             }
             else {
                 throw new Error("error in getting timeout")
             }
         } else {
-            return res.json({ "status": "error", "msg":"Address checksum invalid" })
+            return res.json({ "status": "error", "msg": "Address checksum invalid" })
         }
 
     }
@@ -68,15 +80,18 @@ app.post('/signMessage', async function (req, res) {
         if (!req.body.signer || !req.body.recipient || !req.body.amount || !req.body.contractAddress) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
         }
-        var c1 = await web3.utils.checkAddressChecksum(req.body.signer);
-        var c2 = await web3.utils.checkAddressChecksum(req.body.recipient);
-        var c3 = await web3.utils.checkAddressChecksum(req.body.contractAddress);
+        var ad = await web3.utils.toChecksumAddress(req.body.signer);
+        var ad1 = await web3.utils.toChecksumAddress(req.body.recipient);
+        var ad2 = await web3.utils.toChecksumAddress(req.body.contractAddress);
+        var c1 = await web3.utils.checkAddressChecksum(ad);
+        var c2 = await web3.utils.checkAddressChecksum(ad1);
+        var c3 = await web3.utils.isAddress(ad2);
         if (c1 && c2 && c3) {
-            let pk = config.keys[req.body.signer]
+            let pk = config.keys[ad]
             let amount = parseInt(req.body.amount)
-            let result = await sc.signMessage(pk, req.body.recipient, amount, req.body.contractAddress)
+            let result = await sc.signMessage(pk, ad1, amount, ad2)
             if (result !== null) {
-                return res.json({ "status": "success", "data":result.signature})
+                return res.json({ "status": "success", "data": result.signature })
             }
             else {
                 throw new Error('error in sign message');
@@ -96,15 +111,17 @@ app.post('/claimPayment', async function (req, res) {
         if (!req.body.fromAcc || !req.body.amount || !req.body.contractAdd || !req.body.signature) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
         }
-        var c2 = await web3.utils.checkAddressChecksum(req.body.fromAcc);
-        var c3 = await web3.utils.checkAddressChecksum(req.body.contractAdd);
-        if (c2 && c3) {
-            let pk = config.keys[req.body.fromAcc]
+        var ad = web3.utils.toChecksumAddress(req.body.fromAcc);
+        var c2 = await web3.utils.checkAddressChecksum(ad);
+        var c3 = await web3.utils.isAddress(req.body.contractAdd);
+        var bool =  isNaN(req.body.amount)
+        if (c2 && c3 && !bool) {
+            let pk = config.keys[ad]
             // console.log(pk)
             let amount = parseInt(req.body.amount)
-            let txHash = await sc.claimPayment(pk, req.body.fromAcc, amount, req.body.contractAdd, req.body.signature)
+            let txHash = await sc.claimPayment(pk, ad, amount, req.body.contractAdd, req.body.signature)
             if (txHash !== null) {
-                return res.json({ "status": "success", "data": txHash })
+                return res.json({ "status": "success", "data":"https://ropsten.etherscan.io/tx/" + txHash })
             }
             else {
                 throw new Error("error in claim payment")
@@ -122,19 +139,20 @@ app.post('/claimPayment', async function (req, res) {
 app.post('/getBalance', async function (req, res) {
     try {
         if (!req.body.address) throw new Error("Invalid parameters")
-        var c3 = await web3.utils.checkAddressChecksum(req.body.address);
+        var ad = web3.utils.toChecksumAddress(req.body.address);
+        var c3 = await web3.utils.checkAddressChecksum(ad);
         if (c3) {
-            var bal = await web3.eth.getBalance(req.body.address);
+            var bal = await web3.eth.getBalance(ad);
             if (bal !== undefined) {
                 bal = web3.utils.fromWei(bal, 'ether');
-                return res.json({ "status": "success", "data":bal})
+                return res.json({ "status": "success", "data": bal })
             }
-            else return res.json({ "status": "success", "data":0})
-        } else {throw new Error("Address checksum invalid")}
+            else return res.json({ "status": "success", "data": 0 })
+        } else { throw new Error("Address checksum invalid") }
     }
     catch (err) {
         console.error(err)
-        return res.json({ "status": "error", "msg":err.message})
+        return res.json({ "status": "error", "msg": err.message })
     }
 })
 
@@ -143,14 +161,15 @@ app.post('/destroy', async function (req, res) {
         if (!req.body.sender || !req.body.contractAddress) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
         }
-        var c2 = await web3.utils.checkAddressChecksum(req.body.sender);
-        var c3 = await web3.utils.checkAddressChecksum(req.body.contractAddress);
-        if (c2 && c3) {
-            let pk = config.keys[req.body.sender]
+        var ad = web3.utils.toChecksumAddress(req.body.sender);
+        var c3 = await web3.utils.isAddress(req.body.contractAddress);
+        var c4 = await web3.utils.checkAddressChecksum(ad);
+        if (c3 && c4) {
+            let pk = config.keys[ad]
             var contractObj = new PaymentContract(req.body.contractAddress, web3)
             let txHash = await contractObj.shutDown(pk)
             if (txHash !== null) {
-                return res.json({ "status": "success", "data": txHash })
+                return res.json({ "status": "success", "data": "https://ropsten.etherscan.io/tx/" +txHash })
             }
             else {
                 throw new Error("error in destroy")
@@ -170,19 +189,23 @@ app.post('/deployContract', async function (req, res) {
         if (!req.body.recipient || !req.body.amount || !req.body.sender || !req.body.duration) {
             return res.json({ "status": "error", "message": "Invalid parameters" })
         }
-        var c2 = await web3.utils.checkAddressChecksum(req.body.recipient);
-        var c3 = await web3.utils.checkAddressChecksum(req.body.sender);
-        if (c2 && c3) {
-            let pk = config.keys[req.body.sender]
-            let result = await utils.deployContract(req.body.recipient, req.body.amount, pk, req.body.duration)
+        var ad = web3.utils.toChecksumAddress(req.body.sender);
+        var ad1 = web3.utils.toChecksumAddress(req.body.recipient)
+        var c2 = await web3.utils.checkAddressChecksum(ad1);
+        var c3 = await web3.utils.checkAddressChecksum(ad);
+        var bool = isNaN(req.body.duration)
+        var bool1 = isNaN(req.body.amount)
+        if (c2 && c3 && !bool && !bool1) {
+            let pk = config.keys[ad]
+            let result = await utils.deployContract(ad1, req.body.amount, pk, req.body.duration)
             if (result !== null) {
-                return res.json({ "status": "success", "data":result})
+                return res.json({ "status": "success", "data": "https://ropsten.etherscan.io/tx/" + result })
             }
             else {
                 throw new Error('error in deployContract')
             }
-        } else throw new Error("Address checksum invalid");
-        
+        } else throw new Error("Address checksum invalid/ Invalid parameters");
+
     }
     catch (err) {
         console.error(err.message)
@@ -197,21 +220,20 @@ app.post('/getContractAddress', async function (req, res) {
         }
         let result = await utils.getContractAddress(req.body.txHash)
         if (result !== null) {
-            return res.json({ "status": "success", "data":result})
+            return res.json({ "status": "success", "data": result })
         }
         else throw new Error('Error in getting message')
     }
     catch (err) {
         console.error(err)
-        return res.json({ "status": "error", "msg": err.message })
+        return res.json({ "status": "error", "msg": "Transaction in processing..." })
     }
 })
 
-// app.listen(4000, "0.0.0.0", function () {
-//     console.log("Micro-Payment Channel started");
+app.listen(4000, "0.0.0.0", function () {
+    console.log("Micro-Payment Channel started");
+})
 
-// })
-
-module.exports = app;
+// module.exports = app;
 
 

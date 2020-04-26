@@ -1,6 +1,6 @@
 {
   "name": "paymentchannel",
-  "version": "1.0",
+  "version": "1.0.0",
   "description": "This project implements a Letter Of Credit using Solidity smart contracts and web3.js library.",
   "dependencies": {
     "bignumber.js": "^9.0.0",
@@ -16,5 +16,7 @@
   "devDependencies": {
     "cors": "^2.8.5"
   },
-  "engines": {"node": "10"}
+  "engines": {
+    "node": "10"
+  }
 }
