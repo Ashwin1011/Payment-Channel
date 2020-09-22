@@ -1,4 +1,5 @@
 'use strict'
+//index
 var express = require('express');
 var bodyParser = require('body-parser')
 const cors = require('cors')({ origin: true })
